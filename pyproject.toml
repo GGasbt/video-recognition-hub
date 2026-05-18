@@ -1,0 +1,13 @@
+[project]
+name = "video-recognition-hub"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "deepface>=0.0.100",
+    "opencv-python>=4.13.0.92",
+    "tf-keras>=2.21.0",
+    "torch>=2.12.0",
+    "ultralytics>=8.4.51",
+]
