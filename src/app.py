@@ -1,9 +1,9 @@
 import cv2
-import os
 import numpy as np
 import asyncio
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+import os
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from src import config
@@ -23,15 +23,23 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 @app.get("/")
 async def pc_dashboard(request: Request):
-    # Современный синтаксис FastAPI: контекст передается первым именованным аргументом (или просто через context=...)
     return templates.TemplateResponse(
         request=request, 
-        name="dashboard.html"
+        name="dashboard.html", 
+        context={"current_url": config.IP_WEBCAM_URL} 
     )
 
 @app.get("/api/stats")
 async def get_stats():
     return config.stats
+
+@app.post("/api/change_camera")
+async def change_camera(camera_url: str = Form(...)):
+    if camera_url.strip():
+        config.IP_WEBCAM_URL = camera_url.strip()
+        config.camera_changed = True
+        print(f"-> [Server] Configuration updated. New URL: {config.IP_WEBCAM_URL}")
+    return RedirectResponse(url="/", status_code=303)
 
 @app.get("/video_feed")
 async def video_feed():

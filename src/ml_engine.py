@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import time
 from ultralytics import YOLO
 from deepface import DeepFace
 from src import config
@@ -102,26 +103,37 @@ class MLEngine:
                 
         return frame, current_total, current_rec, current_unk
 
+
 def video_capture_loop(ml_engine):
-    print(f"-> [Capture] Connecting to: {config.IP_WEBCAM_URL}")
+    print(f"-> [Capture] Connecting to initial source: {config.IP_WEBCAM_URL}")
     cap = cv2.VideoCapture(config.IP_WEBCAM_URL)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     
     frame_count = 0
     
     while config.is_running:
-        ret, frame = cap.read()
-        if not ret:
-            print("!!! [Capture] Error reading frame. Reconnecting...")
+        # ПРОВЕРКА: Изменил ли пользователь камеру через дашборд?
+        if config.camera_changed:
+            print(f"-> [Capture] Camera switch requested! Connecting to: {config.IP_WEBCAM_URL}")
             cap.release()
-            cv2.waitKey(1000)
+            config.track_identities.clear()  # Сбрасываем кэш треков при смене локации
+            cap = cv2.VideoCapture(config.IP_WEBCAM_URL)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            config.camera_changed = False
+            frame_count = 0
+            
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            print(f"!!! [Capture] Error reading frame. Reconnecting to: {config.IP_WEBCAM_URL}")
+            cap.release()
+            time.sleep(2)
             cap = cv2.VideoCapture(config.IP_WEBCAM_URL)
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             continue
             
         frame_count += 1
         
-        # Инференс
+        # Инференс через переданный движок
         processed_frame, total, rec, unk = ml_engine.process_frame(frame, frame_count)
         
         # Обновление глобального стейта
