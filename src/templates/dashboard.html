@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Vision Intelligence Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; background: #0b0f19; color: #f3f4f6; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #1f2937; padding-bottom: 16px; }
+        .header h1 { font-size: 24px; color: #38bdf8; font-weight: 600; }
+        .badge { background: #1e293b; padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; font-size: 14px; color: #9ca3af; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; }
+        .video-container { width: 100%; display: flex; justify-content: center; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid #374151; }
+        .video-feed { width: 100%; max-height: 600px; object-fit: contain; }
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .stat-box { background: #1f2937; border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #3b82f6; }
+        .stat-box.success { border-left-color: #10b981; }
+        .stat-box.danger { border-left-color: #ef4444; }
+        .stat-label { font-size: 14px; color: #9ca3af; }
+        .stat-val { font-size: 24px; font-weight: 700; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Vision Intelligence System</h1>
+        <div class="badge">Jinja2 Template Mode</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h3>Live Analytic Video Stream</h3>
+            <div class="video-container">
+                <img class="video-feed" src="/video_feed" alt="Connecting to stream...">
+            </div>
+        </div>
+        <div class="card">
+            <h3>Real-time Metrics</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Active Targets (YOLO)</span>
+                    <span class="stat-val" id="stat-total">0</span>
+                </div>
+                <div class="stat-box success">
+                    <span class="stat-label">Recognized Faces</span>
+                    <span class="stat-val" id="stat-rec">0</span>
+                </div>
+                <div class="stat-box danger">
+                    <span class="stat-label">Unknown / Checking</span>
+                    <span class="stat-val" id="stat-unk">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                document.getElementById('stat-total').innerText = data.total_persons;
+                document.getElementById('stat-rec').innerText = data.recognized;
+                document.getElementById('stat-unk').innerText = data.unknown;
+            } catch (e) {}
+        }, 300);
+    </script>
+</body>
+</html>
