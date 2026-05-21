@@ -14,9 +14,7 @@ class MLEngine:
         self.face_model = YOLO("yolov8n-face.pt")
         self.known_faces = {}
         
-        # Инициализируем SQLite БД
         self._init_db()
-        # Загружаем эмбеддинги в оперативную память для быстрого инференса
         self._load_embeddings()
 
     def _init_db(self):
@@ -33,7 +31,6 @@ class MLEngine:
             conn.commit()
 
     def _load_embeddings(self):
-        """Загружает эмбеддинги из БД. Если БД пуста, сканирует папки."""
         with sqlite3.connect(config.SQLITE_DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT name, embedding FROM face_embeddings")
@@ -42,7 +39,6 @@ class MLEngine:
         if rows:
             print("-> [ML] Loading embeddings from SQLite database...")
             for name, emb_blob in rows:
-                # Десериализуем вектор обратно в numpy array (FaceNet512 дает 512 значений float64)
                 embedding = np.frombuffer(emb_blob, dtype=np.float64)
                 if name not in self.known_faces:
                     self.known_faces[name] = []
@@ -76,10 +72,8 @@ class MLEngine:
                             )
                             emb_vector = np.array(embedding_objs[0]["embedding"], dtype=np.float64)
                             
-                            # Сохраняем в память
                             self.known_faces[person_name].append(emb_vector)
                             
-                            # Сохраняем в SQLite в бинарном виде
                             cursor.execute(
                                 "INSERT INTO face_embeddings (name, embedding) VALUES (?, ?)",
                                 (person_name, emb_vector.tobytes())
@@ -90,7 +84,6 @@ class MLEngine:
         print(f"-> [ML] Cold start finished. Loaded {len(self.known_faces)} identities to DB.")
 
     def add_new_identity(self, name, frame_or_path):
-        """Метод для добавления нового человека в базу данных 'на лету'."""
         try:
             embedding_objs = DeepFace.represent(
                 img_path=frame_or_path, 
@@ -100,7 +93,6 @@ class MLEngine:
             )
             emb_vector = np.array(embedding_objs[0]["embedding"], dtype=np.float64)
             
-            # Пишем в SQLite
             with sqlite3.connect(config.SQLITE_DB_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -109,7 +101,6 @@ class MLEngine:
                 )
                 conn.commit()
             
-            # Обновляем оперативную память движка
             if name not in self.known_faces:
                 self.known_faces[name] = []
             self.known_faces[name].append(emb_vector)
@@ -118,6 +109,24 @@ class MLEngine:
             return True
         except Exception as e:
             print(f"!!! [ML] Error adding new identity {name}: {e}")
+            return False
+        
+    def delete_identity(self, name):
+        try:
+            with sqlite3.connect(config.SQLITE_DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM face_embeddings WHERE name = ?", (name,))
+                conn.commit()
+            
+            if name in self.known_faces:
+                del self.known_faces[name]
+                
+            config.track_identities.clear()
+            
+            print(f"-> [ML] Successfully deleted identity: {name}")
+            return True
+        except Exception as e:
+            print(f"!!! [ML] Error deleting identity {name}: {e}")
             return False
 
     def process_frame(self, frame, frame_count):
@@ -187,7 +196,6 @@ class MLEngine:
 
 
 def video_capture_loop(ml_engine):
-    # Код функции видеопотока оставляем прежним (с поддержкой config.camera_changed)
     print(f"-> [Capture] Connecting to initial source: {config.IP_WEBCAM_URL}")
     cap = cv2.VideoCapture(config.IP_WEBCAM_URL)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)

@@ -4,16 +4,12 @@ from src.ml_engine import MLEngine, video_capture_loop
 from src import config
 
 if __name__ == "__main__":
-    # Инициализируем ML движок (база инициализируется тут)
     engine = MLEngine()
     
-    # Сохраняем ссылку на движок внутри FastAPI state, чтобы использовать его в роутах
     app.state.ml_engine = engine
 
-    # Запуск фонового захвата видеокадров
     capture_thread = threading.Thread(target=video_capture_loop, args=(engine,), daemon=True)
     capture_thread.start()
 
-    # Запуск веб-сервера FastAPI
     import uvicorn
     uvicorn.run(app, host=config.HOST, port=config.PORT, log_level="info")

@@ -7,10 +7,17 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
 </head>
 <body>
-
     <div class="header">
         <h1>AI Vision Intelligence System</h1>
-        <div class="badge">Course Work | Live Mode</div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            {% if is_admin %}
+                <a href="/admin" class="btn btn-primary" style="text-decoration: none; padding: 6px 14px; font-size: 14px;">Admin Panel ⚙️</a>
+                <a href="/logout" class="btn" style="background: #374151; text-decoration: none; padding: 6px 14px; font-size: 14px;">Logout</a>
+            {% else %}
+                <a href="/admin" class="btn btn-primary" style="text-decoration: none; padding: 6px 14px; font-size: 14px;">Login as Admin 🔒</a>
+            {% endif %}
+            <div class="badge">Course Work | Live Mode</div>
+        </div>
     </div>
 
     <div class="grid">
@@ -28,17 +35,6 @@
                 <span class="form-label">Source URL (RTSP / MJPEG Stream):</span>
                 <input type="text" name="camera_url" class="form-input" value="{{ current_url }}" placeholder="http://192.168.1.X:8080/video" style="font-family: monospace;">
                 <button type="submit" class="btn btn-primary">Apply Source</button>
-            </form>
-
-            <h3 style="margin-bottom: 12px; color: #38bdf8;">Register New Face</h3>
-            <form action="/api/add_person" method="post" enctype="multipart/form-data" class="form-group">
-                <span class="form-label">Person's Name:</span>
-                <input type="text" name="name" class="form-input" placeholder="Elon Musk" required>
-                
-                <span class="form-label">Face Photo (.jpg / .png):</span>
-                <input type="file" name="file" class="form-input" accept="image/*" required>
-                
-                <button type="submit" class="btn btn-success">Save to Database</button>
             </form>
 
             <h3>Real-time Metrics</h3>
