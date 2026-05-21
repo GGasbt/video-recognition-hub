@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request, Form, UploadFile, File
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from src import config
 
 app = FastAPI()
@@ -21,6 +22,7 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 @app.get("/")
 async def pc_dashboard(request: Request):
