@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import asyncio
 import os
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, UploadFile, File
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -21,6 +21,7 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
+
 @app.get("/")
 async def pc_dashboard(request: Request):
     return templates.TemplateResponse(
@@ -29,9 +30,11 @@ async def pc_dashboard(request: Request):
         context={"current_url": config.IP_WEBCAM_URL} 
     )
 
+
 @app.get("/api/stats")
 async def get_stats():
     return config.stats
+
 
 @app.post("/api/change_camera")
 async def change_camera(camera_url: str = Form(...)):
@@ -40,6 +43,38 @@ async def change_camera(camera_url: str = Form(...)):
         config.camera_changed = True
         print(f"-> [Server] Configuration updated. New URL: {config.IP_WEBCAM_URL}")
     return RedirectResponse(url="/", status_code=303)
+
+
+# --- ДОБАВЛЕННЫЙ ЭНДПОИНТ ДЛЯ РЕГИСТРАЦИИ НОВЫХ ЛИЦ ---
+@app.post("/api/add_person")
+async def add_person(request: Request, name: str = Form(...), file: UploadFile = File(...)):
+    if name.strip() and file.filename:
+        try:
+            # Асинхронно считываем бинарные данные загруженного файла
+            contents = await file.read()
+            
+            # Декодируем байты в формат изображения OpenCV (OpenCV работает с numpy arrays)
+            nparr = np.frombuffer(contents, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if frame is not None:
+                # Достаем инстанс нашего ML-движка, который мы пробросили в main.py через app.state
+                engine = request.app.state.ml_engine
+                
+                # Вызываем метод извлечения эмбеддинга и записи его в SQLite БД + кэш
+                success = engine.add_new_identity(name.strip(), frame)
+                if success:
+                    print(f"-> [Server] Successfully registered face for: {name.strip()}")
+                else:
+                    print(f"!!! [Server] ML Engine failed to extract face embedding for: {name.strip()}")
+            else:
+                print("!!! [Server] Uploaded file is not a valid image format")
+                
+        except Exception as e:
+            print(f"!!! [Server] Error while processing uploaded image: {e}")
+            
+    return RedirectResponse(url="/", status_code=303)
+
 
 @app.get("/video_feed")
 async def video_feed():
@@ -61,6 +96,7 @@ async def video_feed():
             await asyncio.sleep(0.03)
             
     return StreamingResponse(frame_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
+
 
 @app.on_event("shutdown")
 def shutdown_event():
